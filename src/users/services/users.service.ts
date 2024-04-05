@@ -1,78 +1,83 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common'
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common'
+import { InjectRepository } from '@nestjs/typeorm'
+import { Repository } from 'typeorm'
+import { CustomersService } from './customers.service'
+import { ProductsService } from '@/products/services/products.service'
 import { User } from '@/users/entities/user.entity'
 import { CreateUserDTO, UpdateUserDTO } from '@/users/dtos/users.dto'
-import { Order } from '../entities/order.entity'
-import { ProductsService } from '@/products/services/products.service'
-import { CONFIG_KEY, Config } from '@/config'
 
 @Injectable()
 export class UsersService {
-  private counterId = 1
-  private users: User[] = [
-    {
-      id: 1,
-      email: 'correo@mail.com',
-      password: '12345',
-      role: 'admin',
-    },
-  ]
-
   constructor(
+    @InjectRepository(User) private userRepository: Repository<User>,
+    private customerService: CustomersService,
     private productsService: ProductsService,
-    @Inject(CONFIG_KEY) private configType: Config,
   ) {}
 
   findAll() {
-    console.log(this.configType.apiKey)
-    console.log(this.configType.database.port)
-    console.log(this.configType.database.name)
-    return this.users
+    return this.userRepository.find()
   }
 
-  findOne(id: number) {
-    const user = this.users.find((item) => item.id === id)
+  async findOne(id: number) {
+    const user = await this.userRepository.findOne({
+      where: { id },
+      relations: { customer: true },
+    })
     if (!user) {
-      throw new NotFoundException(`User #${id} not found`)
+      throw new NotFoundException(`User with Id '${id}' not found`)
     }
+
     return user
   }
 
-  create(data: CreateUserDTO) {
-    this.counterId = this.counterId + 1
-    const newUser = {
-      id: this.counterId,
-      ...data,
+  async create(data: CreateUserDTO) {
+    await this.existsByEmail(data.email)
+    const newUser = this.userRepository.create(data)
+    if (data.customerId) {
+      const customer = await this.customerService.findOne(data.customerId)
+      newUser.customer = customer
     }
-    this.users.push(newUser)
-    return newUser
+    return this.userRepository.save(newUser)
   }
 
-  update(id: number, changes: UpdateUserDTO) {
-    const user = this.findOne(id)
-    const index = this.users.findIndex((item) => item.id === id)
-    this.users[index] = {
-      ...user,
-      ...changes,
+  async update(id: number, changes: UpdateUserDTO) {
+    const oldUser = await this.findOne(id)
+    if (changes.email && oldUser.email != changes.email) {
+      await this.existsByEmail(changes.email)
     }
-    return this.users[index]
+
+    const updatedUser = this.userRepository.merge(oldUser, changes)
+    if (changes.customerId && oldUser.customer?.id != changes.customerId) {
+      const customer = await this.customerService.findOne(changes.customerId)
+      updatedUser.customer = customer
+    }
+
+    return this.userRepository.save(updatedUser)
   }
 
-  remove(id: number) {
-    const index = this.users.findIndex((item) => item.id === id)
-    if (index === -1) {
-      throw new NotFoundException(`User #${id} not found`)
-    }
-    this.users.splice(index, 1)
-    return true
+  async remove(id: number) {
+    const user = await this.findOne(id)
+    await this.userRepository.remove(user)
   }
 
-  findOrder(id: number): Order {
+  async findOrder(id: number) {
     const user = this.findOne(id)
 
     return {
       date: new Date(),
       user,
-      products: this.productsService.findAll(),
+      products: await this.productsService.findAll(),
+    }
+  }
+
+  private async existsByEmail(email: string) {
+    const exists = await this.userRepository.existsBy({ email })
+    if (exists) {
+      throw new ConflictException(`Already user with email '${email}'`)
     }
   }
 }

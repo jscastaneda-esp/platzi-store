@@ -1,57 +1,60 @@
-import { Injectable, NotFoundException } from '@nestjs/common'
-
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common'
+import { InjectRepository } from '@nestjs/typeorm'
+import { Repository } from 'typeorm'
 import { Brand } from '../entities/brand.entity'
 import { CreateBrandDTO, UpdateBrandDTO } from '../dtos/brands.dto'
 
 @Injectable()
 export class BrandsService {
-  private counterId = 1
-  private brands: Brand[] = [
-    {
-      id: 1,
-      name: 'Brand 1',
-      image: 'https://i.imgur.com/U4iGx1j.jpeg',
-    },
-  ]
+  constructor(
+    @InjectRepository(Brand) private brandRepository: Repository<Brand>,
+  ) {}
 
   findAll() {
-    return this.brands
+    return this.brandRepository.find()
   }
 
-  findOne(id: number) {
-    const product = this.brands.find((item) => item.id === id)
-    if (!product) {
-      throw new NotFoundException(`Brand #${id} not found`)
+  async findOne(id: number) {
+    const brand = await this.brandRepository.findOne({
+      where: { id },
+      relations: { products: true },
+    })
+    if (!brand) {
+      throw new NotFoundException(`Brand with Id '${id}' not found`)
     }
-    return product
+
+    return brand
   }
 
-  create(data: CreateBrandDTO) {
-    this.counterId = this.counterId + 1
-    const newBrand = {
-      id: this.counterId,
-      ...data,
-    }
-    this.brands.push(newBrand)
-    return newBrand
+  async create(data: CreateBrandDTO) {
+    await this.existsByName(data.name)
+    const newBrand = this.brandRepository.create(data)
+    return this.brandRepository.save(newBrand)
   }
 
-  update(id: number, changes: UpdateBrandDTO) {
-    const brand = this.findOne(id)
-    const index = this.brands.findIndex((item) => item.id === id)
-    this.brands[index] = {
-      ...brand,
-      ...changes,
+  async update(id: number, changes: UpdateBrandDTO) {
+    const oldBrand = await this.findOne(id)
+    if (changes.name && oldBrand.name != changes.name) {
+      await this.existsByName(changes.name)
     }
-    return this.brands[index]
+
+    const updatedBrand = this.brandRepository.merge(oldBrand, changes)
+    return this.brandRepository.save(updatedBrand)
   }
 
-  remove(id: number) {
-    const index = this.brands.findIndex((item) => item.id === id)
-    if (index === -1) {
-      throw new NotFoundException(`Brand #${id} not found`)
+  async remove(id: number) {
+    const user = await this.findOne(id)
+    await this.brandRepository.remove(user)
+  }
+
+  private async existsByName(name: string) {
+    const exists = await this.brandRepository.existsBy({ name })
+    if (exists) {
+      throw new ConflictException(`Already brand with name '${name}'`)
     }
-    this.brands.splice(index, 1)
-    return true
   }
 }

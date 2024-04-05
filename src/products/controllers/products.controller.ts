@@ -12,6 +12,7 @@ import {
 } from '@nestjs/common'
 import {
   CreateProductDTO,
+  FilterProductsDTO,
   UpdateProductDTO,
 } from '@/products/dtos/products.dto'
 import { ApiQuery, ApiTags } from '@nestjs/swagger'
@@ -37,12 +38,8 @@ export class ProductsController {
     schema: { type: 'number', default: 0, minimum: 0 },
   })
   @Get()
-  getAll(
-    @Query('limit', new ParseIntPipe({ optional: true })) limit = 100,
-    @Query('offset', new ParseIntPipe({ optional: true })) offset = 0,
-  ) {
-    console.log(limit, offset)
-    return this.productsService.findAll()
+  getAll(@Query() query: FilterProductsDTO) {
+    return this.productsService.findAll(query)
   }
 
   @Get(':id')
@@ -59,7 +56,23 @@ export class ProductsController {
   }
 
   @Delete(':id')
-  delete(@Param('id', ParseIntPipe) id: number) {
-    this.productsService.delete(id)
+  remove(@Param('id', ParseIntPipe) id: number) {
+    return this.productsService.remove(id)
+  }
+
+  @Put(':id/category/:category')
+  addCategory(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('category', ParseIntPipe) category: number,
+  ) {
+    return this.productsService.addCategory(id, category)
+  }
+
+  @Delete(':id/category/:category')
+  removeCategory(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('category', ParseIntPipe) category: number,
+  ) {
+    return this.productsService.removeCategory(id, category)
   }
 }

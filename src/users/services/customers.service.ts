@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common'
-
+import { InjectRepository } from '@nestjs/typeorm'
+import { Repository } from 'typeorm'
 import { Customer } from '@/users/entities/customer.entity'
 import {
   CreateCustomerDTO,
@@ -8,54 +9,40 @@ import {
 
 @Injectable()
 export class CustomersService {
-  private counterId = 1
-  private customers: Customer[] = [
-    {
-      id: 1,
-      name: 'Nicolas',
-      lastName: 'Molina',
-      phone: '3111111212',
-    },
-  ]
+  constructor(
+    @InjectRepository(Customer)
+    private customerRepository: Repository<Customer>,
+  ) {}
 
   findAll() {
-    return this.customers
+    return this.customerRepository.find()
   }
 
-  findOne(id: number) {
-    const customer = this.customers.find((item) => item.id === id)
+  async findOne(id: number) {
+    const customer = await this.customerRepository.findOne({
+      where: { id },
+      relations: { user: true },
+    })
     if (!customer) {
-      throw new NotFoundException(`Customer #${id} not found`)
+      throw new NotFoundException(`Customer with Id '${id}' not found`)
     }
+
     return customer
   }
 
   create(data: CreateCustomerDTO) {
-    this.counterId = this.counterId + 1
-    const newCustomer = {
-      id: this.counterId,
-      ...data,
-    }
-    this.customers.push(newCustomer)
-    return newCustomer
+    const newCustomer = this.customerRepository.create(data)
+    return this.customerRepository.save(newCustomer)
   }
 
-  update(id: number, changes: UpdateCustomerDTO) {
-    const customer = this.findOne(id)
-    const index = this.customers.findIndex((item) => item.id === id)
-    this.customers[index] = {
-      ...customer,
-      ...changes,
-    }
-    return this.customers[index]
+  async update(id: number, changes: UpdateCustomerDTO) {
+    const oldCustomer = await this.findOne(id)
+    const updatedCustomer = this.customerRepository.merge(oldCustomer, changes)
+    return this.customerRepository.save(updatedCustomer)
   }
 
-  remove(id: number) {
-    const index = this.customers.findIndex((item) => item.id === id)
-    if (index === -1) {
-      throw new NotFoundException(`Customer #${id} not found`)
-    }
-    this.customers.splice(index, 1)
-    return true
+  async remove(id: number) {
+    const customer = await this.findOne(id)
+    await this.customerRepository.remove(customer)
   }
 }
