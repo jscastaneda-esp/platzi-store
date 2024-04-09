@@ -1,20 +1,11 @@
-import {
-  Controller,
-  Get,
-  Param,
-  Post,
-  Body,
-  Put,
-  Delete,
-  ParseIntPipe,
-} from '@nestjs/common'
-
+import { Controller, Get, Param, Post, Body, Put, Delete } from '@nestjs/common'
 import { CustomersService } from '@/users/services/customers.service'
 import {
   CreateCustomerDTO,
   UpdateCustomerDTO,
 } from '@/users/dtos/customers.dto'
 import { ApiTags } from '@nestjs/swagger'
+import { ParseMongoIdPipe } from '@/common/parse-mongo-id.pipe'
 
 @ApiTags('users', 'customers')
 @Controller('customers')
@@ -27,7 +18,7 @@ export class CustomersController {
   }
 
   @Get(':id')
-  get(@Param('id', ParseIntPipe) id: number) {
+  get(@Param('id', ParseMongoIdPipe) id: string) {
     return this.customersService.findOne(id)
   }
 
@@ -38,14 +29,14 @@ export class CustomersController {
 
   @Put(':id')
   update(
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id', ParseMongoIdPipe) id: string,
     @Body() payload: UpdateCustomerDTO,
   ) {
     return this.customersService.update(id, payload)
   }
 
   @Delete(':id')
-  remove(@Param('id', ParseIntPipe) id: number) {
-    return this.customersService.remove(+id)
+  remove(@Param('id', ParseMongoIdPipe) id: string) {
+    return this.customersService.remove(id)
   }
 }

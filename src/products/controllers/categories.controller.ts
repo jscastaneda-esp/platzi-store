@@ -1,13 +1,4 @@
-import {
-  Controller,
-  Get,
-  Param,
-  Post,
-  Body,
-  Put,
-  Delete,
-  ParseIntPipe,
-} from '@nestjs/common'
+import { Controller, Get, Param, Post, Body, Put, Delete } from '@nestjs/common'
 
 import { CategoriesService } from '@/products/services/categories.service'
 import {
@@ -15,6 +6,7 @@ import {
   UpdateCategoryDTO,
 } from '@/products/dtos/categories.dto'
 import { ApiTags } from '@nestjs/swagger'
+import { ParseMongoIdPipe } from '@/common/parse-mongo-id.pipe'
 
 @ApiTags('products', 'categories')
 @Controller('categories')
@@ -27,7 +19,7 @@ export class CategoriesController {
   }
 
   @Get(':id')
-  get(@Param('id', ParseIntPipe) id: number) {
+  get(@Param('id', ParseMongoIdPipe) id: string) {
     return this.categoriesService.findOne(id)
   }
 
@@ -38,14 +30,14 @@ export class CategoriesController {
 
   @Put(':id')
   update(
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id', ParseMongoIdPipe) id: string,
     @Body() payload: UpdateCategoryDTO,
   ) {
     return this.categoriesService.update(id, payload)
   }
 
   @Delete(':id')
-  remove(@Param('id', ParseIntPipe) id: number) {
-    return this.categoriesService.remove(+id)
+  remove(@Param('id', ParseMongoIdPipe) id: string) {
+    return this.categoriesService.remove(id)
   }
 }
