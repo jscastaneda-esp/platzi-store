@@ -1,67 +1,75 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common'
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common'
+import { InjectModel } from '@nestjs/mongoose'
+import { Model } from 'mongoose'
 import { User } from '@/users/entities/user.entity'
 import { CreateUserDTO, UpdateUserDTO } from '@/users/dtos/users.dto'
-import { Order } from '../entities/order.entity'
-import { ProductsService } from '@/products/services/products.service'
-import { CONFIG_KEY, Config } from '@/config'
+import * as bcrypt from 'bcrypt'
 
 @Injectable()
 export class UsersService {
-  constructor(
-    private productsService: ProductsService,
-    @Inject(CONFIG_KEY) private configType: Config,
-  ) {}
+  constructor(@InjectModel(User.name) private userModel: Model<User>) {}
+
+  async create(data: CreateUserDTO) {
+    await this.existsByEmail(data.email)
+    const newUser = new this.userModel(data)
+    newUser.password = await bcrypt.hash(newUser.password, 10)
+    return newUser.save()
+  }
 
   findAll() {
-    // console.log(this.configType.apiKey)
-    // console.log(this.configType.database.port)
-    // console.log(this.configType.database.name)
-    // return this.users
+    return this.userModel.find().select('-password').exec()
   }
 
-  findOne(id: number) {
-    // const user = this.users.find((item) => item.id === id)
-    // if (!user) {
-    //   throw new NotFoundException(`User #${id} not found`)
-    // }
-    // return user
+  async findOne(id: string) {
+    const user = await this.userModel.findById(id).select('-password').exec()
+    if (!user) {
+      throw new NotFoundException(`User with Id ${id} not found`)
+    }
+
+    return user
   }
 
-  create(data: CreateUserDTO) {
-    // this.counterId = this.counterId + 1
-    // const newUser = {
-    //   id: this.counterId,
-    //   ...data,
-    // }
-    // this.users.push(newUser)
-    // return newUser
+  findByEmail(email: string) {
+    return this.userModel.findOne({ email }).select('-password').exec()
   }
 
-  update(id: number, changes: UpdateUserDTO) {
-    // const user = this.findOne(id)
-    // const index = this.users.findIndex((item) => item.id === id)
-    // this.users[index] = {
-    //   ...user,
-    //   ...changes,
-    // }
-    // return this.users[index]
+  async update(id: string, changes: UpdateUserDTO) {
+    const user = await this.userModel
+      .findByIdAndUpdate(id, { $set: changes }, { new: true })
+      .exec()
+    if (!user) {
+      throw new NotFoundException(`User with Id ${id} not found`)
+    }
+
+    return user
   }
 
-  remove(id: number) {
-    // const index = this.users.findIndex((item) => item.id === id)
-    // if (index === -1) {
-    //   throw new NotFoundException(`User #${id} not found`)
-    // }
-    // this.users.splice(index, 1)
-    // return true
+  async remove(id: string) {
+    const user = await this.userModel.findByIdAndDelete(id).exec()
+    if (!user) {
+      throw new NotFoundException(`User with Id ${id} not found`)
+    }
+
+    return
   }
 
-  async findOrder(id: number) {
+  async findOrder(id: string) {
     // const user = this.findOne(id)
     // return {
     //   date: new Date(),
     //   user,
     //   products: await this.productsService.findAll(),
     // }
+  }
+
+  private async existsByEmail(email: string) {
+    const exists = await this.userModel.exists({ email }).exec()
+    if (exists) {
+      throw new ConflictException(`User with email '${email}' already exists`)
+    }
   }
 }
