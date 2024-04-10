@@ -9,6 +9,7 @@ import { ProductsModule } from './products/products.module'
 import { DatabaseModule } from './database/database.module'
 import { environments } from './environments'
 import { schema, config } from './config'
+import { AuthModule } from './auth/auth.module'
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { schema, config } from './config'
     UsersModule,
     ProductsModule,
     DatabaseModule,
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [

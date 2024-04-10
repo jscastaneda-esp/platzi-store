@@ -34,7 +34,7 @@ export class UsersService {
   }
 
   findByEmail(email: string) {
-    return this.userModel.findOne({ email }).select('-password').exec()
+    return this.userModel.findOne({ email }).exec()
   }
 
   async update(id: string, changes: UpdateUserDTO) {

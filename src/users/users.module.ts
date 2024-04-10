@@ -31,5 +31,6 @@ import { OrdersController } from './controllers/orders.controller'
   ],
   providers: [UsersService, CustomersService, OrdersService],
   controllers: [UsersController, CustomersController, OrdersController],
+  exports: [UsersService],
 })
 export class UsersModule {}
