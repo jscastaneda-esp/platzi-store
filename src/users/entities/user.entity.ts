@@ -8,6 +8,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm'
 import { Customer } from './customer.entity'
+import { Exclude } from 'class-transformer'
 
 @Entity('users')
 export class User {
@@ -17,6 +18,7 @@ export class User {
   @Column({ length: 200, unique: true })
   email: string
 
+  @Exclude()
   @Column({ length: 255 })
   password: string // encrypt
 

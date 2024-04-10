@@ -9,6 +9,7 @@ import { CustomersService } from './customers.service'
 import { ProductsService } from '@/products/services/products.service'
 import { User } from '@/users/entities/user.entity'
 import { CreateUserDTO, UpdateUserDTO } from '@/users/dtos/users.dto'
+import * as bcrypt from 'bcrypt'
 
 @Injectable()
 export class UsersService {
@@ -34,9 +35,16 @@ export class UsersService {
     return user
   }
 
+  findByEmail(email: string) {
+    return this.userRepository.findOne({
+      where: { email },
+    })
+  }
+
   async create(data: CreateUserDTO) {
     await this.existsByEmail(data.email)
     const newUser = this.userRepository.create(data)
+    newUser.password = await bcrypt.hash(newUser.password, 10)
     if (data.customerId) {
       const customer = await this.customerService.findOne(data.customerId)
       newUser.customer = customer
