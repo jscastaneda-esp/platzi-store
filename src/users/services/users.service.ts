@@ -12,8 +12,8 @@ export class UsersService {
     {
       id: 1,
       email: 'correo@mail.com',
-      password: '12345',
-      role: 'admin',
+      password: '$2b$10$Uk5jusD57zZpPUhmOCscY.yr0V4gGeElANFT.0x1wAUERWu5rSf1W',
+      role: 'adminss',
     },
   ]
 
@@ -35,6 +35,10 @@ export class UsersService {
       throw new NotFoundException(`User #${id} not found`)
     }
     return user
+  }
+
+  findByEmail(email: string) {
+    return this.users.find((user) => user.email === email)
   }
 
   create(data: CreateUserDTO) {

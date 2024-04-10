@@ -3,6 +3,7 @@ import * as Joi from 'joi'
 
 export const schema = Joi.object({
   API_KEY: Joi.string().required(),
+  JWT_SECRET: Joi.string().required(),
   DATABASE_PORT: Joi.number().required(),
   DATABASE_NAME: Joi.string().required(),
 })
@@ -13,6 +14,7 @@ export const config = registerAs('config', () => ({
     name: process.env.DATABASE_NAME,
   },
   apiKey: process.env.API_KEY,
+  jwtSecret: process.env.JWT_SECRET,
 }))
 
 export type Config = ConfigType<typeof config>
